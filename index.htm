@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>齿轮齿条变速比转向器原理</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #111315;
+  --bg-card:   #1c1f23;
+  --bg-panel:  #23272c;
+  --text:      #f0ece3;
+  --text-muted:#b8b4ac;
+  --text-dim:  #6a6762;
+  --border:    rgba(255,255,255,0.10);
+  --accent:    #55bbff;
+  --amber:     #f5a623;
+  --green:     #3dd68c;
+  --c1:        #f5a623;
+  --c2:        #ff7055;
+  --c3:        #3dd68c;
+  --c4:        #7a7672;
+  --radius:    14px;
+  --radius-sm: 9px;
+}
+
+html { font-size: 18px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.65;
+  padding: 18px 14px 60px;
+  min-height: 100vh;
+}
+
+.container { max-width: 680px; margin: 0 auto; }
+
+.hd-title {
+  font-size: 1.22rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 5px;
+}
+.hd-title span { color: var(--accent); }
+.hd-sub {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 22px;
+}
+
+.sec-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+/* Selector */
+.selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+  margin-bottom: 18px;
+}
+
+.sel-btn {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 12px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  width: 100%;
+}
+.sel-btn.active-c[data-type="commercial"] {
+  border-color: var(--amber);
+  background: rgba(245,166,35,0.08);
+}
+.sel-btn.active-c[data-type="passenger"] {
+  border-color: var(--green);
+  background: rgba(61,214,140,0.08);
+}
+
+.sel-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  margin-right: 7px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+[data-type="commercial"] .sel-dot { background: var(--amber); }
+[data-type="passenger"]  .sel-dot { background: var(--green); }
+
+.sel-title {
+  font-size: 0.94rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.sel-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+.sel-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+[data-type="commercial"] .sel-badge { background: rgba(245,166,35,0.18); color: var(--amber); }
+[data-type="passenger"]  .sel-badge { background: rgba(61,214,140,0.18);  color: var(--green); }
+
+.sel-diag {
+  width: 100%; height: 78px;
+  margin-top: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Card */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 15px 13px;
+  margin-bottom: 14px;
+}
+.card-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 11px;
+}
+.card-title {
+  font-size: 0.80rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+.card-sub { font-size: 0.78rem; color: var(--text-dim); }
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 15px;
+  margin-bottom: 12px;
+}
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+.leg-item.on { color: var(--text); }
+.leg-line { width: 22px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+.chart-wrap { position: relative; height: 280px; }
+
+/* Info panel */
+.info-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 15px;
+  margin-bottom: 14px;
+  transition: border-color 0.3s;
+}
+.info-panel.ac-commercial { border-color: rgba(245,166,35,0.35); }
+.info-panel.ac-passenger  { border-color: rgba(61,214,140,0.35); }
+
+.info-sec { display: none; }
+.info-sec.show { display: block; }
+
+.info-heading {
+  font-size: 1.00rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+.info-metric {
+  background: var(--bg-panel);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+}
+.info-metric-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+.info-metric-val { font-size: 0.93rem; font-weight: 600; }
+
+.curve-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.curve-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 0.87rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.curve-swatch { width: 24px; height: 3px; border-radius: 2px; flex-shrink: 0; margin-top: 9px; }
+
+.principle {
+  font-size: 0.87rem;
+  color: var(--text-muted);
+  line-height: 1.80;
+  background: var(--bg-panel);
+  border-radius: var(--radius-sm);
+  padding: 12px 13px;
+  border-left: 3px solid var(--border);
+}
+.principle.amber { border-left-color: var(--amber); }
+.principle.green  { border-left-color: var(--green); }
+
+/* Tooth */
+.tooth-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.tooth-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 11px 9px 9px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.25s, background 0.25s;
+  -webkit-tap-highlight-color: transparent;
+}
+.tooth-card.hl-commercial { border-color: rgba(245,166,35,0.5); background: rgba(245,166,35,0.06); }
+.tooth-card.hl-passenger  { border-color: rgba(61,214,140,0.5);  background: rgba(61,214,140,0.06); }
+.tooth-lbl { font-size: 0.85rem; color: var(--text-muted); margin-top: 7px; font-weight: 600; }
+.tooth-sub { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+
+.footer {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+user-select: none
+</style>
+</head>
+<body>
+<div class="container">
+
+<div style="margin-bottom:20px;">
+  <div class="hd-title">转向器变速比工作原理<br><span>齿轮齿条式转向器+循环球式转向器</span></div>
+  <div class="hd-sub">《汽车设计》第6版 · 第八章第三节 · 图8-17 / 图8-18 · 式(8-21)</div>
+</div>
+
+<div class="sec-label">选择齿条齿形 / 车型</div>
+<div class="selector">
+
+  <button class="sel-btn" data-type="commercial" onclick="setMode('commercial')">
+    <div class="sel-title"><span class="sel-dot"></span>a) 齿条中部齿</div>
+    <div class="sel-sub">中间压力角大<br>两端压力角小</div>
+    <div style="font-size:0.82rem;color:var(--amber);margin-bottom:7px;line-height:1.6;">中部 i<sub>ω</sub> 小 → 灵敏<br>两端 i<sub>ω</sub> 大 → 省力</div>
+    <span class="sel-badge">曲线 1，曲线 2 · 商用车</span>
+    <div class="sel-diag">
+      <svg viewBox="0 0 200 78" xmlns="http://www.w3.org/2000/svg" width="190" height="74">
+        <rect x="10" y="51" width="180" height="19" fill="#252830" stroke="#404450" stroke-width="1"/>
+        <line x1="10" y1="70" x2="19" y2="59" stroke="#353840" stroke-width="1"/>
+        <line x1="29" y1="70" x2="44" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="58" y1="70" x2="73" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="87" y1="70" x2="102" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="116" y1="70" x2="131" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="145" y1="70" x2="160" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="170" y1="70" x2="183" y2="59" stroke="#353840" stroke-width="1"/>
+        <polygon points="86,51 93,36 100,31 107,36 114,51" fill="#3c4050" stroke="#f5a623" stroke-width="2"/>
+        <polygon points="64,51 70,41 75,38 80,41 86,51" fill="#353844" stroke="#f5a623" stroke-width="1.2" opacity="0.75"/>
+        <polygon points="114,51 120,41 125,38 130,41 136,51" fill="#353844" stroke="#f5a623" stroke-width="1.2" opacity="0.75"/>
+        <polygon points="36,51 41,45 44,43 47,45 52,51" fill="#2c3038" stroke="#f5a623" stroke-width="0.9" opacity="0.45"/>
+        <polygon points="148,51 153,45 156,43 159,45 164,51" fill="#2c3038" stroke="#f5a623" stroke-width="0.9" opacity="0.45"/>
+        <circle cx="100" cy="20" r="13" fill="none" stroke="#55bbff" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.7"/>
+        <text x="74" y="48" fill="#f5a623" font-size="10" opacity="0.9" font-weight="bold">α₂大</text>
+        <text x="95" y="13" fill="#55bbff" font-size="9" opacity="0.85">d₁大</text>
+        <text x="100" y="77" fill="#9a9690" font-size="9" text-anchor="middle">中部齿 · 压力角最大</text>
+      </svg>
+    </div>
+  </button>
+
+  <button class="sel-btn" data-type="passenger" onclick="setMode('passenger')">
+    <div class="sel-title"><span class="sel-dot"></span>b) 齿条两端齿</div>
+    <div class="sel-sub">两端压力角大<br>中间压力角小</div>
+    <div style="font-size:0.82rem;color:var(--green);margin-bottom:7px;line-height:1.6;">中部 i<sub>ω</sub> 大 → 省力不过敏<br>两端 i<sub>ω</sub> 小 → 灵敏</div>
+    <span class="sel-badge">曲线 3 · 乘用车</span>
+    <div class="sel-diag">
+      <svg viewBox="0 0 200 78" xmlns="http://www.w3.org/2000/svg" width="190" height="74">
+        <rect x="10" y="51" width="180" height="19" fill="#252830" stroke="#404450" stroke-width="1"/>
+        <line x1="10" y1="70" x2="19" y2="59" stroke="#353840" stroke-width="1"/>
+        <line x1="29" y1="70" x2="44" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="58" y1="70" x2="73" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="87" y1="70" x2="102" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="116" y1="70" x2="131" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="145" y1="70" x2="160" y2="55" stroke="#353840" stroke-width="1"/>
+        <line x1="170" y1="70" x2="183" y2="59" stroke="#353840" stroke-width="1"/>
+        <polygon points="74,51 78,44 81,42 84,44 90,51" fill="#2c3038" stroke="#3dd68c" stroke-width="0.9" opacity="0.55"/>
+        <polygon points="52,51 57,40 61,37 65,40 70,51" fill="#343844" stroke="#3dd68c" stroke-width="1.2" opacity="0.78"/>
+        <polygon points="130,51 135,40 139,37 143,40 148,51" fill="#343844" stroke="#3dd68c" stroke-width="1.2" opacity="0.78"/>
+        <polygon points="14,51 21,36 27,30 33,36 40,51" fill="#3c4050" stroke="#3dd68c" stroke-width="2"/>
+        <polygon points="160,51 167,36 173,30 179,36 186,51" fill="#3c4050" stroke="#3dd68c" stroke-width="2"/>
+        <circle cx="100" cy="21" r="11" fill="none" stroke="#55bbff" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.7"/>
+        <text x="10" y="46" fill="#3dd68c" font-size="10" opacity="0.9" font-weight="bold">α₂大</text>
+        <text x="95" y="14" fill="#55bbff" font-size="9" opacity="0.85">d₂小</text>
+        <text x="100" y="77" fill="#9a9690" font-size="9" text-anchor="middle">两端齿 · 压力角最大</text>
+      </svg>
+    </div>
+  </button>
+
+</div>
+
+<!-- Chart -->
+<div class="card">
+  <div class="card-hd">
+    <div class="card-title">角传动比变化特性曲线</div>
+    <div class="card-sub">i<sub>ω</sub> — β</div>
+  </div>
+  <div class="legend-row" id="legend-row"></div>
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+</div>
+
+<!-- Info panel -->
+<div class="info-panel" id="info-panel">
+
+  <div class="info-sec show" id="info-all">
+    <div class="info-heading" style="color:var(--text-muted);">ℹ&nbsp; 请选择上方齿条类型查看详细说明</div>
+    <div class="principle">
+      变速比转向器沿齿条长度方向改变齿的<strong>压力角 α₂</strong>（及模数），使小齿轮节圆半径随齿条位置变化，从而使角传动比 <em>i<sub>ω</sub></em> 随转向盘转角 β 变化。<br><br>
+      由式 (8-21)：<strong>i<sub>p</sub> = D<sub>sw</sub> / (2a) · i<sub>ω0</sub></strong><br>
+      力传动比与角传动比成正比。合理设计 i<sub>ω</sub> 变化规律，在<strong>轻便性</strong>与<strong>灵敏性</strong>之间取得最优平衡。
+    </div>
+  </div>
+
+  <div class="info-sec" id="info-commercial">
+    <div class="info-heading" style="color:var(--amber);">🚛&nbsp; a) 齿条中部齿 · 商用车 · 曲线 1，曲线 2</div>
+    <div class="info-grid">
+      <div class="info-metric">
+        <div class="info-metric-lbl">中部（直行）</div>
+        <div class="info-metric-val" style="color:var(--amber);">灵敏</div>
+      </div>
+      <div class="info-metric">
+        <div class="info-metric-lbl">两端（大转角）</div>
+        <div class="info-metric-val" style="color:var(--amber);">省力</div>
+      </div>
+      <div class="info-metric">
+        <div class="info-metric-lbl">曲线形态</div>
+        <div class="info-metric-val">下凹形（中间小）</div>
+      </div>
+      <div class="info-metric">
+        <div class="info-metric-lbl">适用车型</div>
+        <div class="info-metric-val">无助力商用车</div>
+      </div>
+    </div>
+    <div class="curve-rows">
+      <div class="curve-row">
+        <div class="curve-swatch" style="background:var(--c1);"></div>
+        <div><strong style="color:var(--c1);">曲线 1</strong> — 下凹形，中部 i<sub>ω</sub> 最小（灵敏），两端 i<sub>ω</sub> 最大（省力），幅度变化较大。</div>
+      </div>
+      <div class="curve-row">
+        <div class="curve-swatch" style="background:var(--c2);"></div>
+        <div><strong style="color:var(--c2);">曲线 2</strong> — 同为下凹形，变化幅度相对平缓的备选方案。</div>
+      </div>
+    </div>
+    <div class="principle amber">
+      商用车<strong>无转向助力</strong>、前轴荷大，大转角泊车时转向力矩极大。<br><br>
+      中部 i<sub>ω</sub> 小 → i<sub>p</sub> 小 → 方向盘转角直接响应，<strong>直行灵敏</strong>；<br>
+      两端 i<sub>ω</sub> 大 → i<sub>p</sub> = D<sub>sw</sub>/(2a) · i<sub>ω</sub> 大 → 手力 F<sub>h</sub> = 2F<sub>w</sub>/i<sub>p</sub> 小，<strong>大转角省力</strong>，有效克服大轴荷下的转向困难。<br><br>
+      推荐范围：商用车 i<sub>ω</sub> = <strong>23～32</strong>
+    </div>
+  </div>
+
+  <div class="info-sec" id="info-passenger">
+    <div class="info-heading" style="color:var(--green);">🚗&nbsp; b) 齿条两端齿 · 乘用车 · 曲线 3</div>
+    <div class="info-grid">
+      <div class="info-metric">
+        <div class="info-metric-lbl">中部（直行）</div>
+        <div class="info-metric-val" style="color:var(--green);">省力（不过敏）</div>
+      </div>
+      <div class="info-metric">
+        <div class="info-metric-lbl">两端（大转角）</div>
+        <div class="info-metric-val" style="color:var(--green);">灵敏</div>
+      </div>
+      <div class="info-metric">
+        <div class="info-metric-lbl">曲线形态</div>
+        <div class="info-metric-val">上凸形（中间大）</div>
+      </div>
+      <div class="info-metric">
+        <div class="info-metric-lbl">适用车型</div>
+        <div class="info-metric-val">有助力乘用车</div>
+      </div>
+    </div>
+    <div class="curve-rows">
+      <div class="curve-row">
+        <div class="curve-swatch" style="background:var(--c3);"></div>
+        <div><strong style="color:var(--c3);">曲线 3</strong> — 上凸形，中部 i<sub>ω</sub> 最大（高速不过敏），两端 i<sub>ω</sub> 减小（低速大转角灵敏）。</div>
+      </div>
+    </div>
+    <div class="principle green">
+      乘用车有<strong>助力转向</strong>，省力由助力装置解决；高速直行时，希望方向盘<strong>不要过度灵敏</strong>——轻微扰动不应过度响应，防止高速摆头失稳。<br><br>
+      中部 i<sub>ω</sub> 大 → i<sub>p</sub> 大 → 同样的路面力，手上感觉轻，且对转向盘小角度输入响应较迟钝，高速<strong>直行稳定</strong>；<br>
+      两端 i<sub>ω</sub> 小 → 低速大转角时转向响应快，<strong>泊车灵活</strong>。<br><br>
+      教材规定中部值<strong>不宜低于 15～16</strong>（防止高速过于敏感）。<br>
+      推荐范围：乘用车 i<sub>ω</sub> = <strong>17～25</strong>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tooth comparison -->
+<div class="sec-label">参照图 8-17 · 齿形对比（点击切换）</div>
+<div class="tooth-row">
+
+  <div class="tooth-card" id="tc-commercial" onclick="setMode('commercial')">
+    <svg viewBox="0 0 160 66" xmlns="http://www.w3.org/2000/svg" width="100%" height="66">
+      <rect x="5" y="46" width="150" height="14" fill="#1e2228" stroke="#383c46" stroke-width="1"/>
+      <line x1="5" y1="60" x2="12" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="21" y1="60" x2="31" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="43" y1="60" x2="53" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="65" y1="60" x2="75" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="87" y1="60" x2="97" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="109" y1="60" x2="119" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="131" y1="60" x2="141" y2="52" stroke="#303440" stroke-width="0.8"/>
+      <line x1="148" y1="60" x2="155" y2="53" stroke="#303440" stroke-width="0.8"/>
+      <polygon points="68,46 74,32 80,26 86,32 92,46" fill="#363b48" stroke="#f5a623" stroke-width="1.8"/>
+      <polygon points="45,46 50,36 54,33 58,36 63,46" fill="#2e3240" stroke="#f5a623" stroke-width="1.1" opacity="0.72"/>
+      <polygon points="97,46 102,36 106,33 110,36 115,46" fill="#2e3240" stroke="#f5a623" stroke-width="1.1" opacity="0.72"/>
+      <polygon points="18,46 22,41 25,39 28,41 32,46" fill="#262a36" stroke="#f5a623" stroke-width="0.8" opacity="0.45"/>
+      <polygon points="128,46 132,41 135,39 138,41 142,46" fill="#262a36" stroke="#f5a623" stroke-width="0.8" opacity="0.45"/>
+      <circle cx="80" cy="16" r="10" fill="none" stroke="#55bbff" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.65"/>
+      <text x="80" y="54" fill="#f5a623" font-size="7.5" text-anchor="middle" opacity="0.7">←s₁→</text>
+      <text x="80" y="10" fill="#55bbff" font-size="7.5" text-anchor="middle" opacity="0.75">d₁</text>
+    </svg>
+    <div class="tooth-lbl">a) 齿条中部齿</div>
+    <div class="tooth-sub">中部 d₁ 大，s₁ 大</div>
+  </div>
+
+  <div class="tooth-card" id="tc-passenger" onclick="setMode('passenger')">
+    <svg viewBox="0 0 160 66" xmlns="http://www.w3.org/2000/svg" width="100%" height="66">
+      <rect x="5" y="46" width="150" height="14" fill="#1e2228" stroke="#383c46" stroke-width="1"/>
+      <line x1="5" y1="60" x2="12" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="21" y1="60" x2="31" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="43" y1="60" x2="53" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="65" y1="60" x2="75" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="87" y1="60" x2="97" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="109" y1="60" x2="119" y2="51" stroke="#303440" stroke-width="0.8"/>
+      <line x1="131" y1="60" x2="141" y2="52" stroke="#303440" stroke-width="0.8"/>
+      <line x1="148" y1="60" x2="155" y2="53" stroke="#303440" stroke-width="0.8"/>
+      <polygon points="72,46 76,40 80,38 84,40 88,46" fill="#262a36" stroke="#3dd68c" stroke-width="0.9" opacity="0.55"/>
+      <polygon points="49,46 54,37 58,34 62,37 67,46" fill="#2e3240" stroke="#3dd68c" stroke-width="1.1" opacity="0.75"/>
+      <polygon points="93,46 98,37 102,34 106,37 111,46" fill="#2e3240" stroke="#3dd68c" stroke-width="1.1" opacity="0.75"/>
+      <polygon points="13,46 19,31 25,25 31,31 37,46" fill="#363b48" stroke="#3dd68c" stroke-width="1.8"/>
+      <polygon points="123,46 129,31 135,25 141,31 147,46" fill="#363b48" stroke="#3dd68c" stroke-width="1.8"/>
+      <circle cx="80" cy="17" r="9" fill="none" stroke="#55bbff" stroke-width="1.2" stroke-dasharray="2,2" opacity="0.65"/>
+      <text x="80" y="54" fill="#3dd68c" font-size="7.5" text-anchor="middle" opacity="0.7">←s₂→</text>
+      <text x="80" y="11" fill="#55bbff" font-size="7.5" text-anchor="middle" opacity="0.75">d₂</text>
+    </svg>
+    <div class="tooth-lbl">b) 齿条两端齿</div>
+    <div class="tooth-sub">两端 d₂ 小，s₂ 小</div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     循环球式转向器 变速比原理
+     ══════════════════════════════════════════════ -->
+<div style="margin-top:24px;">
+  <div class="sec-label">循环球式转向器 · 变速比原理（对比齿扇节圆半径）</div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title" style="margin-bottom:10px;">原理说明</div>
+    <div class="principle" style="border-left-color:var(--accent);">
+      循环球式转向器中，<strong>齿扇（扇形齿轮）</strong>各齿的节圆半径 r 沿摆动方向逐渐变化。<br><br>
+      由式 (8-15)：<strong>i<sub>ω</sub> = 2πr / P</strong>（P 为蜗杆螺距）<br>
+      角传动比与齿扇<strong>当前啮合位置的节圆半径 r 成正比</strong>。<br><br>
+      因此，改变齿扇各齿节圆半径的分布规律，即可实现角传动比随转向盘转角 β 的连续变化——这与齿轮齿条式通过改变压力角的原理完全对应。
+    </div>
+  </div>
+
+  <!-- Two sector gear diagrams side by side -->
+  <div class="tooth-row" style="margin-bottom:14px;">
+
+    <!-- 中间节圆半径小 → 曲线 1，曲线 2 · 商用车 -->
+    <div class="tooth-card hl-commercial" style="cursor:default;">
+      <svg viewBox="0 0 170 130" xmlns="http://www.w3.org/2000/svg" width="100%" height="120">
+        <!-- Worm (螺杆) at top, simplified -->
+        <ellipse cx="85" cy="22" rx="30" ry="12" fill="#252830" stroke="#55bbff" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7"/>
+        <text x="85" y="26" fill="#55bbff" font-size="9" text-anchor="middle" opacity="0.8">螺杆</text>
+
+        <!-- Sector gear body arc -->
+        <path d="M 30,115 A 72,72 0 0,1 140,115" fill="#2a2e38" stroke="#404450" stroke-width="1.2"/>
+        <line x1="30" y1="115" x2="85" y2="43" stroke="#404450" stroke-width="1"/>
+        <line x1="140" y1="115" x2="85" y2="43" stroke="#404450" stroke-width="1"/>
+
+        <!-- Pivot point -->
+        <circle cx="85" cy="118" r="4" fill="#404450" stroke="#6a6762" stroke-width="1"/>
+        <text x="85" y="128" fill="#6a6762" font-size="8" text-anchor="middle">摆动中心</text>
+
+        <!-- Teeth on sector — CENTER tooth is SMALL (r small) -->
+        <!-- Left tooth (large) -->
+        <polygon points="46,97 40,80 43,76 53,76 56,80 51,97" fill="#363b48" stroke="#f5a623" stroke-width="1.5"/>
+        <!-- Left-center tooth (medium) -->
+        <polygon points="64,88 59,73 62,69 70,69 73,73 69,88" fill="#303540" stroke="#f5a623" stroke-width="1.2" opacity="0.8"/>
+        <!-- CENTER tooth — SMALL node radius -->
+        <polygon points="80,82 76,70 79,67 85,67 91,67 94,70 90,82" fill="#282d38" stroke="#f5a623" stroke-width="1" opacity="0.6"/>
+        <!-- Right-center tooth (medium) -->
+        <polygon points="97,88 101,73 108,69 116,69 119,73 114,88" fill="#303540" stroke="#f5a623" stroke-width="1.2" opacity="0.8"/>
+        <!-- Right tooth (large) -->
+        <polygon points="114,97 119,80 127,76 137,76 140,80 134,97" fill="#363b48" stroke="#f5a623" stroke-width="1.5"/>
+
+        <!-- Pitch circle radius arrows — center is small -->
+        <line x1="85" y1="118" x2="85" y2="67" stroke="#f5a623" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7"/>
+        <text x="89" y="96" fill="#f5a623" font-size="9" opacity="0.9" font-weight="bold">r₀小</text>
+
+        <!-- Side radius (large) -->
+        <line x1="85" y1="118" x2="43" y2="78" stroke="#f5a623" stroke-width="1" stroke-dasharray="2,2" opacity="0.45"/>
+        <text x="50" y="106" fill="#f5a623" font-size="8" opacity="0.6">r大</text>
+      </svg>
+      <div class="tooth-lbl" style="color:var(--amber);">中间齿扇节圆半径 r₀ 小</div>
+      <div class="tooth-sub">中部 i<sub>ω</sub> 小 → 灵敏<br>两端 i<sub>ω</sub> 大 → 省力</div>
+      <div style="margin-top:8px;">
+        <span class="sel-badge" style="background:rgba(245,166,35,0.18);color:var(--amber);font-size:0.72rem;padding:3px 9px;border-radius:20px;font-weight:700;">
+          ↔ 曲线 1，曲线 2 · 商用车
+        </span>
+      </div>
+    </div>
+
+    <!-- 中间节圆半径大 → 曲线3 乘用车 -->
+    <div class="tooth-card hl-passenger" style="cursor:default;">
+      <svg viewBox="0 0 170 130" xmlns="http://www.w3.org/2000/svg" width="100%" height="120">
+        <!-- Worm at top -->
+        <ellipse cx="85" cy="22" rx="30" ry="12" fill="#252830" stroke="#55bbff" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7"/>
+        <text x="85" y="26" fill="#55bbff" font-size="9" text-anchor="middle" opacity="0.8">螺杆</text>
+
+        <!-- Sector gear body arc -->
+        <path d="M 30,115 A 72,72 0 0,1 140,115" fill="#2a2e38" stroke="#404450" stroke-width="1.2"/>
+        <line x1="30" y1="115" x2="85" y2="43" stroke="#404450" stroke-width="1"/>
+        <line x1="140" y1="115" x2="85" y2="43" stroke="#404450" stroke-width="1"/>
+
+        <!-- Pivot point -->
+        <circle cx="85" cy="118" r="4" fill="#404450" stroke="#6a6762" stroke-width="1"/>
+        <text x="85" y="128" fill="#6a6762" font-size="8" text-anchor="middle">摆动中心</text>
+
+        <!-- Teeth on sector — CENTER tooth is LARGE (r large) -->
+        <!-- Left tooth (small) -->
+        <polygon points="43,97 40,86 43,83 50,83 53,86 50,97" fill="#282d38" stroke="#3dd68c" stroke-width="1" opacity="0.55"/>
+        <!-- Left-center tooth (medium) -->
+        <polygon points="61,91 58,77 61,74 68,74 71,77 68,91" fill="#303540" stroke="#3dd68c" stroke-width="1.2" opacity="0.78"/>
+        <!-- CENTER tooth — LARGE node radius -->
+        <polygon points="78,82 73,62 76,58 85,58 94,58 97,62 92,82" fill="#363b48" stroke="#3dd68c" stroke-width="1.8"/>
+        <!-- Right-center tooth (medium) -->
+        <polygon points="99,91 102,77 109,74 116,74 119,77 116,91" fill="#303540" stroke="#3dd68c" stroke-width="1.2" opacity="0.78"/>
+        <!-- Right tooth (small) -->
+        <polygon points="117,97 120,86 127,83 134,83 137,86 134,97" fill="#282d38" stroke="#3dd68c" stroke-width="1" opacity="0.55"/>
+
+        <!-- Pitch circle radius arrows — center is LARGE -->
+        <line x1="85" y1="118" x2="85" y2="58" stroke="#3dd68c" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.8"/>
+        <text x="89" y="91" fill="#3dd68c" font-size="9" opacity="0.9" font-weight="bold">r₀大</text>
+
+        <!-- Side radius (small) -->
+        <line x1="85" y1="118" x2="46" y2="85" stroke="#3dd68c" stroke-width="1" stroke-dasharray="2,2" opacity="0.45"/>
+        <text x="47" y="108" fill="#3dd68c" font-size="8" opacity="0.6">r小</text>
+      </svg>
+      <div class="tooth-lbl" style="color:var(--green);">中间齿扇节圆半径 r₀ 大</div>
+      <div class="tooth-sub">中部 i<sub>ω</sub> 大 → 省力不过敏<br>两端 i<sub>ω</sub> 小 → 灵敏</div>
+      <div style="margin-top:8px;">
+        <span class="sel-badge" style="background:rgba(61,214,140,0.18);color:var(--green);font-size:0.72rem;padding:3px 9px;border-radius:20px;font-weight:700;">
+          ↔ 曲线 3 · 乘用车
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Comparison table -->
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title" style="margin-bottom:12px;">两类转向器变速比实现方式对比</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.83rem;line-height:1.6;">
+        <thead>
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.12);">
+            <th style="text-align:left;padding:7px 8px;color:var(--text-dim);font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;">转向器类型</th>
+            <th style="text-align:left;padding:7px 8px;color:var(--text-dim);font-weight:700;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;">变速比实现方式</th>
+            <th style="text-align:center;padding:7px 8px;color:var(--amber);font-weight:700;font-size:0.72rem;">曲线 1，曲线 2</th>
+            <th style="text-align:center;padding:7px 8px;color:var(--green);font-weight:700;font-size:0.72rem;">曲线3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.07);">
+            <td style="padding:8px 8px;color:var(--text);font-weight:600;">齿轮齿条式</td>
+            <td style="padding:8px 8px;color:var(--text-muted);">沿齿条改变齿的<strong style="color:var(--text);">压力角 α₂</strong><br>→ 节圆半径 d 变化</td>
+            <td style="padding:8px 8px;text-align:center;color:var(--amber);">中部 d 大<br>（中部灵敏）</td>
+            <td style="padding:8px 8px;text-align:center;color:var(--green);">两端 d 大<br>（中部省力）</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 8px;color:var(--text);font-weight:600;">循环球式</td>
+            <td style="padding:8px 8px;color:var(--text-muted);">沿齿扇改变各齿的<strong style="color:var(--text);">节圆半径 r</strong><br>→ i<sub>ω</sub> = 2πr/P 变化</td>
+            <td style="padding:8px 8px;text-align:center;color:var(--amber);">中间齿 r₀ 小<br>（中部灵敏）</td>
+            <td style="padding:8px 8px;text-align:center;color:var(--green);">中间齿 r₀ 大<br>（中部省力）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">数据来源：《汽车设计》第6版（闵海涛 王建华），第八章第三节，页 261–266</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const N = 120;
+const beta = Array.from({length:N+1}, (_,i) => -1 + i*2/N);
+const betaLabels = beta.map(v => (v*540).toFixed(0));
+
+// Curves 1 & 2 (商用车): CONCAVE — low in center, high at ends
+const I_C_MIN = 15, I_C_MAX1 = 30, I_C_MAX2 = 27;
+const c1data = beta.map(v => I_C_MIN + (I_C_MAX1 - I_C_MIN) * Math.pow(Math.sin(v*Math.PI/2), 2));
+const c2data = beta.map(v => (I_C_MIN+1.5) + (I_C_MAX2 - (I_C_MIN+1.5)) * Math.pow(Math.sin(v*Math.PI/2), 2));
+
+// Curve 3 (乘用车): CONVEX — high in center, low at ends
+const I_P_MIN = 14, I_P_MAX = 30;
+const c3data = beta.map(v => I_P_MIN + (I_P_MAX - I_P_MIN) * Math.pow(Math.cos(v*Math.PI/2), 2));
+
+// Curve 4: constant
+const c4data = beta.map(() => 20);
+
+const gc = 'rgba(255,255,255,0.07)';
+const tc = '#6a6762';
+
+const DATASETS = [
+  {id:'c1', label:'曲线 1（商用·下凹·中部灵敏）', data:c1data, color:'#f5a623', dash:[],   group:'commercial', w:2.5},
+  {id:'c2', label:'曲线 2（商用·下凹·幅度较平）', data:c2data, color:'#ff7055', dash:[5,3], group:'commercial', w:2.0},
+  {id:'c3', label:'曲线 3（乘用·上凸·中部省力）', data:c3data, color:'#3dd68c', dash:[],   group:'passenger',  w:2.5},
+  {id:'c4', label:'曲线 4（无变速比·恒定）',       data:c4data, color:'#7a7672', dash:[3,3], group:'all',        w:1.5},
+];
+
+const legEl = document.getElementById('legend-row');
+DATASETS.forEach(ds => {
+  const el = document.createElement('span');
+  el.className = 'leg-item';
+  el.id = 'leg-' + ds.id;
+  el.innerHTML = `<span class="leg-line" style="background:${ds.color}"></span>${ds.label}`;
+  legEl.appendChild(el);
+});
+
+const chart = new Chart(document.getElementById('chart'), {
+  type: 'line',
+  data: {
+    labels: betaLabels,
+    datasets: DATASETS.map(ds => ({
+      label: ds.label,
+      data: ds.data,
+      borderColor: ds.color,
+      backgroundColor: 'transparent',
+      borderWidth: ds.w,
+      pointRadius: 0,
+      borderDash: ds.dash,
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: {mode:'index', intersect:false},
+    plugins: {
+      legend: {display:false},
+      tooltip: {
+        backgroundColor:'#1c1f23', borderColor:'rgba(255,255,255,0.15)', borderWidth:1,
+        titleColor:'#f0ece3', bodyColor:'#b8b4ac',
+        titleFont:{size:14}, bodyFont:{size:13}, padding:11,
+        callbacks: {
+          title: items => 'β = ' + items[0].label + '°',
+          label: item  => '  ' + item.dataset.label.replace(/（.*）/,'') + '：i_ω = ' + Number(item.raw).toFixed(1),
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: {display:true, text:'转向盘转角  β  (°)', font:{size:13}, color:tc},
+        ticks: {
+          maxTicksLimit:7, color:tc, font:{size:12},
+          callback: (val,i) => {
+            const v = parseFloat(betaLabels[i]);
+            return [-540,-270,0,270,540].includes(v) ? v : '';
+          }
+        },
+        grid: {color:gc},
+      },
+      y: {
+        title: {display:true, text:'角传动比  i_ω', font:{size:13}, color:tc},
+        ticks: {color:tc, font:{size:12}},
+        grid: {color:gc},
+        min:8, max:36,
+      }
+    }
+  }
+});
+
+function setMode(mode) {
+  document.querySelectorAll('.sel-btn').forEach(btn =>
+    btn.classList.toggle('active-c', btn.dataset.type === mode)
+  );
+  document.getElementById('tc-commercial').className =
+    'tooth-card' + (mode==='commercial' ? ' hl-commercial' : '');
+  document.getElementById('tc-passenger').className =
+    'tooth-card' + (mode==='passenger'  ? ' hl-passenger'  : '');
+  const panel = document.getElementById('info-panel');
+  panel.className = 'info-panel' + (mode!=='all' ? ' ac-'+mode : '');
+  document.querySelectorAll('.info-sec').forEach(s => s.classList.remove('show'));
+  document.getElementById('info-'+mode).classList.add('show');
+
+  const active = mode==='all'         ? ['c1','c2','c3','c4']
+               : mode==='commercial'  ? ['c1','c2','c4']
+               :                        ['c3','c4'];
+  DATASETS.forEach((ds,i) => {
+    const on = active.includes(ds.id);
+    chart.data.datasets[i].borderWidth = on ? ds.w : 0.4;
+    chart.data.datasets[i].borderColor = on ? ds.color : ds.color+'20';
+    const leg = document.getElementById('leg-'+ds.id);
+    if (leg) leg.classList.toggle('on', on);
+  });
+  chart.update('none');
+}
+
+setMode('all');
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+if (e.key === 'F12' || 
+(e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+(e.ctrlKey && e.key === 'U') ||
+(e.ctrlKey && e.key === 'S')) {
+e.preventDefault();
+return false;
+}
+});
+
+</script>
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && e.key === 'U') ||
+        (e.ctrlKey && e.key === 'S')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+</script>
+
+</body>
+</html>
